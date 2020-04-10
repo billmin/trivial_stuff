@@ -198,9 +198,13 @@ class Collection:
 					else:
 						redundance_found = False
 						for item in self._members:
-							redundance_found = True if type(member)==type(item) and (isinstance(member, tuple(self.type_limit[:-2]) and member==item) or (isinstance(member, tuple(self.type_limit[-2:])) and member.isIdentityOf(item))) else False
+							redundance_found = True if type(member)==type(item) and ((isinstance(member, tuple(self.type_limit[:-2])) and member==item) or (isinstance(member, tuple(self.type_limit[-2:])) and member.isIdentityOf(item))) else False
 						## do update
 						if not redundance_found:
+							if isinstance(member, (EmptySet, Collection)):
+								print("**** ", member.name)
+							else:
+								print("**** ", member)
 							self._members.append(member)
 							self._number_of_members += 1
 							self._update_clusters(opt_mode=1, target_member=member)
@@ -333,10 +337,13 @@ class Collection:
 
 				for type_name in union_cluster_type_name:
 					if type_name in self._clusters.keys() and type_name in C.clusters.keys():
+						print(type_name)
 						union_set.append_all(self._clusters[type_name]+C.clusters[type_name])
 					elif type_name in self._clusters.keys() and (type_name not in C.clusters.keys()):
+						print(type_name)
 						union_set.append_all(self._clusters[type_name])
 					else:
+						print(type_name)
 						union_set.append_all(C.clusters[type_name])
 						
 				return union_set
@@ -413,6 +420,8 @@ if __name__ == '__main__':
 	e9 = entity.Entity('name9', {'1':1,'2':2,'3':3})
 	e10 = entity.Entity('name10', {'1':1,'2':2,'3':3})
 
+	C0 = Collection([e1, 'hello'])
+
 	C1 = Collection([e1, e2, e3, e3, 'hello'])
 	print(C1.number_of_members, C1.members)
 	#print(C1.clusters)
@@ -421,21 +430,51 @@ if __name__ == '__main__':
 	C2 = Collection([e3, e4, e5, e6, 1.0])
 	print(C2.number_of_members, C2.members)
 	#print(C2.clusters)
-
+	'''
 	print('\n\nintersection---------------------------------------------')
 	for item in C1.intersectionSet(C2).members:
 		if type(item) in [entity.Entity, point.Point]:
 			print(item.name)
 		else:
 			print(item)
+	print(C1.intersectionSet(C2).intersectionSet(C0))
 
 	print('\n\nissubset---------------------------------------------')
-	print(C1.isSubsetOf(C2))
+	print(C1.isSubsetOf(C2), C0.isSubsetOf(C1), C0.isProperSubsetOf(C1))
+	print(EmptySet().isProperSubsetOf(C1))
 
+	print('\n\nispropersubset---------------------------------------------')
+	print(C1.isProperSubsetOf(C2))
+	'''
+	'''
 	print('\n\nunion---------------------------------------------')
 	for item in C1.unionSet(C2).members:
 		if type(item) in [entity.Entity, point.Point]:
 			print(item.name)
 		else:
 			print(item)
+	'''
+	print('--------------------------------------------')
+	#print(C1.unionSet(C2).unionSet(C0).members)
+	for item in C1.unionSet(C2).unionSet(C0).members:
+		if type(item) in [entity.Entity, point.Point]:
+			print(item.name)
+		else:
+			print(item)
+	'''
+	print('\n\n-----------------------------------------')
+	C1.append('world')
+	print(C1.number_of_members, C1.members)
+	
+	print('\n\n-----------------------------------------')
+	C2.append(['a', 'b'])
+	print(C2.number_of_members, C2.members)
 
+	print('\n\n-----------------------------------------')
+	C2.pop(-1)
+	print(C2.number_of_members, C2.members)
+
+	print('\n\n-----------------------------------------')
+	C1.remove('hello')
+	print(C1.number_of_members, C1.members)
+	'''

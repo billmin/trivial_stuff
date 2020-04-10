@@ -41,7 +41,7 @@ class EmptySet:
 
 	def isSubsetOf(self, C):
 		try:
-			if not isinstance(type(C), tuple(self.__class__, Collection)):
+			if not isinstance(C, (self.__class__, Collection)):
 				raise TypeError("TypeError: EmptySet.isSubsetOf(x): incorrect type of x")
 			else:
 				return True
@@ -50,7 +50,7 @@ class EmptySet:
 
 	def isProperSubsetOf(self, C):
 		try:
-			if not isinstance(type(C), tuple(self.__class__, Collection)):
+			if not isinstance(C, (self.__class__, Collection)):
 				raise TypeError("TypeError: EmptySet.isProperSubsetOf(x): incorrect type of x")
 			else:
 				return True
@@ -69,6 +69,8 @@ class Collection:
 	def _divided_into_clusters_by_type(self):
 		# divided into clusters
 		for item in self._members:
+			if type(item).__name__ not in self._clusters.keys():
+				self._clusters[type(item).__name__] = []
 			self._clusters[type(item).__name__].append(item)
 
 	# update clusters
@@ -80,11 +82,15 @@ class Collection:
 		'''
 		opt_mode = opt_mode if opt_mode in [0, 1, 2] else 0
 		##
-		if opt == 0:
+		if opt_mode == 0:
 			pass
 		elif opt_mode == 1:
+			if type(target_member) not in self._clusters.keys():
+				self._clusters[type(target_member).__name__] = []
 			self._clusters[type(target_member).__name__].append(target_member)
 		else:
+			if type(target_member) not in self._clusters.keys():
+				self._clusters[type(target_member).__name__] = []
 			self._clusters[type(target_member).__name__].remove(target_member)
 
 	# redundance handle
@@ -99,7 +105,7 @@ class Collection:
 				# search for abnormal-typed members
 				idx_abnormal = []
 				for idx, item in enumerate(self._members):
-					if type(item) not in type_limit:
+					if type(item) not in self.type_limit:
 						idx_abnormal.append(idx)
 				# remove abnormal-typed members
 				for i, idx in enumerate(idx_abnormal):
@@ -109,12 +115,12 @@ class Collection:
 			idx_redundance = []
 			for idx, item in enumerate(self._members):
 				for i in range(total_members-idx-1):
-					if type(item) == type(self._members[i+1]):
-						if type(item) in type_limit[:-2]:
-							if item == self._members[i+1]:
+					if type(item) == type(self._members[i+1+idx]):
+						if type(item) in self.type_limit[:-2]:
+							if item == self._members[i+1+idx]:
 								idx_redundance.append(idx)
 						else:
-							if item.isIdentityOf(self._members[i+1]):
+							if item.isIdentityOf(self._members[i+1+idx]):
 								idx_redundance.append(idx)
 
 			# remove redundant members
@@ -137,8 +143,6 @@ class Collection:
 
 		# 3) --- initialize clusters ---
 		self._clusters = dict()
-		for typ in type_limit:
-			self._clusters[typ.__name__] = []
 		##
 		self._divided_into_clusters_by_type()
 
@@ -158,14 +162,14 @@ class Collection:
 	def append(self, new_member):
 		try:
 			# abnormal-type check
-			if type(new_member) not in type_limit:
+			if type(new_member) not in self.type_limit:
 				raise TypeError("TypeError: Collection.append(x): incorrect type of x")
 
 			redundance_found = False
 			# redundance check
 			for item in self._members:
 				if type(new_member) == type(item):
-					if isinstance(new_member, tuple(type_limit[:-2])):
+					if isinstance(new_member, tuple(self.type_limit[:-2])):
 						if new_member == item:
 							redundance_found = True
 					else:
@@ -185,16 +189,16 @@ class Collection:
 	def append_all(self, new_members):
 		try:
 			# abnormal-type check
-			if not isinstance(type(new_members), (list, tuple)):
+			if not isinstance(new_members, (list, tuple)):
 				raise TypeError("TypeError: Collection.append_all(self, x): incorrect type of x")
 			else:
 				for member in new_members:
-					if type(member) not in type_limit:
+					if type(member) not in self.type_limit:
 						raise TypeError("TypeError: Collection.append_all(self, x): incorrect type of x's members")
 					else:
 						redundance_found = False
 						for item in self._members:
-							redundance_found = True if type(member)==type(item) and (isinstance(member, tuple(type_limit[:-2]) and member==item) or (isinstance(member, tuple(type_limit[-2:])) and member.isIdentityOf(item))) else False
+							redundance_found = True if type(member)==type(item) and (isinstance(member, tuple(self.type_limit[:-2]) and member==item) or (isinstance(member, tuple(self.type_limit[-2:])) and member.isIdentityOf(item))) else False
 						## do update
 						if not redundance_found:
 							self._members.append(member)
@@ -208,11 +212,11 @@ class Collection:
 	def remove(self, member):
 		try:
 			# abnormal-type check
-			if type(member) not in type_limit:
+			if type(member) not in self.type_limit:
 				raise TypeError("TypeError: Collection.remove(x): incorrect type of x")
 			not_found = True
 			for item in self._members:
-				if isinstance(member, tuple(type_limit[:-2])):
+				if isinstance(member, tuple(self.type_limit[:-2])):
 					if member == item:
 						self._members.remove(item)
 						# update number of members
@@ -257,7 +261,7 @@ class Collection:
 	# bilateral intersection
 	def _bilateral_intersection(self, C):
 		try:
-			if not isinstance(type(C), (self.__class__, EmptySet)):
+			if not isinstance(C, (self.__class__, EmptySet)):
 				raise TypeError("TypeError: Collection._bilateral_intersection(x): incorrect type of x")
 			
 			# check if c is empty set
@@ -265,15 +269,15 @@ class Collection:
 				return EmptySet()
 
 			# check common type
-			common_type = [typ for typ in type_limit if (typ.__name__ in self._clusters.keys()) and (typ.__name__ in C.clusters.keys())]
+			common_type_name = [typ.__name__ for typ in self.type_limit if (typ.__name__ in self._clusters.keys()) and (typ.__name__ in C.clusters.keys())]
 
 			# prepare a list for intersection 
 			common_members = []
 			# pick out common members for each type
-			for typ in common_type:
-				for item in self._clusters[typ.__name__]:
-					for item_c in self._clusters[typ.__name__]:
-						if typ in type_limit[:-2]:
+			for type_name in common_type_name:
+				for item in self._clusters[type_name]:
+					for item_c in C.clusters[type_name]:
+						if type(item) in self.type_limit[-2:]:
 							if item.isIdentityOf(item_c):
 								common_members.append(item)
 								break
@@ -297,7 +301,7 @@ class Collection:
 		# one by one
 		try:
 			for i, c in enumerate(C):
-				if not isinstance(type(c), (self.__class__, EmptySet)):
+				if not isinstance(c, (self.__class__, EmptySet)):
 					raise TypeError("TypeError: Collection.intersectionSet(x): incorrect type of x")
 				if i == 0:
 					inter_set = self._bilateral_intersection(c)
@@ -315,7 +319,7 @@ class Collection:
 	# bilateral union
 	def _bilateral_union(self, C):
 		try:
-			if not isinstance(type(C), (self.__class__, EmptySet)):
+			if not isinstance(C, (self.__class__, EmptySet)):
 				raise TypeError("TypeError: Collection._bilateral_union(x): incorrect type of x")
 			
 			# check if c is empty set
@@ -323,17 +327,17 @@ class Collection:
 				return self
 			else:
 				# check union type
-				union_cluster_type = [typ for typ in type_limit if (typ.__name__ in self._clusters.keys()) or (typ.__name__ in C.clusters.keys())]
+				union_cluster_type_name = [typ.__name__ for typ in self.type_limit if (typ.__name__ in self._clusters.keys()) or (typ.__name__ in C.clusters.keys())]
 				# prepare an union set
 				union_set = Collection()
 
-				for typ in union_cluster_type:
-					if typ in self._clusters.keys() and typ in C.clusters.keys():
-						union_set.append_all(self._clusters[typ]+C.clusters[typ])
-					elif typ in self._clusters.keys() and (typ not in C.clusters.keys()):
-						union_set.append_all(self._clusters[typ])
+				for type_name in union_cluster_type_name:
+					if type_name in self._clusters.keys() and type_name in C.clusters.keys():
+						union_set.append_all(self._clusters[type_name]+C.clusters[type_name])
+					elif type_name in self._clusters.keys() and (type_name not in C.clusters.keys()):
+						union_set.append_all(self._clusters[type_name])
 					else:
-						union_set.append_all(C.clusters[typ])
+						union_set.append_all(C.clusters[type_name])
 						
 				return union_set
 		except Exception as err:
@@ -344,7 +348,7 @@ class Collection:
 		# one by one
 		try:
 			for i, c in enumerate(C):
-				if not isinstance(type(c), (self.__class__, EmptySet)):
+				if not isinstance(c, (self.__class__, EmptySet)):
 					raise TypeError("TypeError: Collection.unionSet(x): incorrect type of x")
 				if i == 0:
 					union_set = self._bilateral_union(c)
@@ -359,7 +363,7 @@ class Collection:
 	# subset
 	def isSubsetOf(self, C):
 		try:
-			if not isinstance(type(C), tuple(self.__class__, EmptySet)):
+			if not isinstance(C, (self.__class__, EmptySet)):
 				raise TypeError("TypeError: Collection.isSubsetOf(x): incorrect type of x")
 				
 			# intersection
@@ -379,7 +383,7 @@ class Collection:
 	# proper subset
 	def isProperSubsetOf(self, C):
 		try:
-			if not isinstance(type(C), tuple(self.__class__, EmptySet)):
+			if not isinstance(C, (self.__class__, EmptySet)):
 				raise TypeError("TypeError: Collection.isProperSubsetOf(x): incorrect type of x")
 				
 			# intersection
@@ -398,4 +402,40 @@ class Collection:
 		
 
 if __name__ == '__main__':
-	pass
+	e1 = entity.Entity('name1', {'1':1,'2':2,'3':3})
+	e2 = entity.Entity('name2', {'1':1,'2':2,'3':3})
+	e3 = entity.Entity('name3', {'1':1,'2':2,'3':3})
+	e4 = entity.Entity('name4', {'1':1,'2':2,'3':3})
+	e5 = entity.Entity('name5', {'1':1,'2':2,'3':3})
+	e6 = entity.Entity('name6', {'1':1,'2':2,'3':3})
+	e7 = entity.Entity('name7', {'1':1,'2':2,'3':3})
+	e8 = entity.Entity('name8', {'1':1,'2':2,'3':3})
+	e9 = entity.Entity('name9', {'1':1,'2':2,'3':3})
+	e10 = entity.Entity('name10', {'1':1,'2':2,'3':3})
+
+	C1 = Collection([e1, e2, e3, e3, 'hello'])
+	print(C1.number_of_members, C1.members)
+	#print(C1.clusters)
+
+	print('---------------------------------------------')
+	C2 = Collection([e3, e4, e5, e6, 1.0])
+	print(C2.number_of_members, C2.members)
+	#print(C2.clusters)
+
+	print('\n\nintersection---------------------------------------------')
+	for item in C1.intersectionSet(C2).members:
+		if type(item) in [entity.Entity, point.Point]:
+			print(item.name)
+		else:
+			print(item)
+
+	print('\n\nissubset---------------------------------------------')
+	print(C1.isSubsetOf(C2))
+
+	print('\n\nunion---------------------------------------------')
+	for item in C1.unionSet(C2).members:
+		if type(item) in [entity.Entity, point.Point]:
+			print(item.name)
+		else:
+			print(item)
+
